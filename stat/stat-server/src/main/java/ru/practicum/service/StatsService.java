@@ -10,6 +10,9 @@ public interface StatsService {
 
     EndpointHitDto saveHit(EndpointHitDto endpointHitDto);
 
-    List<ViewStatsDto> findHitsByParams(LocalDateTime start, LocalDateTime end, List<String> uris,
-                                        Boolean unique);
+    List<ViewStatsDto> findHitsByParams(LocalDateTime start,
+                                        LocalDateTime end,
+                                        List<String> uris,
+                                        boolean unique);
+
 }
