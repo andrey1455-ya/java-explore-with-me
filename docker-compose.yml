@@ -1,7 +1,7 @@
 services:
-  mainDb:
+  main-db:
     image: postgres:16.1
-    container_name: mainDb
+    container_name: main-db
     environment:
       POSTGRES_DB: mainDb
       POSTGRES_USER: postgres
@@ -14,9 +14,9 @@ services:
       timeout: 5s
       retries: 5
 
-  statsDb:
+  stats-db:
     image: postgres:16.1
-    container_name: statsDb
+    container_name: stats-db
     environment:
       POSTGRES_DB: statsDb
       POSTGRES_USER: postgres
@@ -29,24 +29,26 @@ services:
       timeout: 5s
       retries: 5
 
-  statsApp:
+  statssapp:
     build:
-      context: .
+      context: ./ewm-stats/stats-server
       dockerfile: Dockerfile
-    container_name: statsApp
+    image: java-explore-with-me-statsapp
+    container_name: statssapp
     ports:
       - "9090:9090"
     depends_on:
-      statsDb:
+      stats-db:
         condition: service_healthy
 
-  ewmService:
+  ewmservice:
     build:
-      context: .
+      context: ./ewm-service
       dockerfile: Dockerfile
-    container_name: ewmService
+    image: java-explore-with-me-ewmservice
+    container_name: ewmservice
     ports:
       - "8080:8080"
     depends_on:
-      mainDb:
+      main-db:
         condition: service_healthy
