@@ -1,54 +1,68 @@
+version: "3.1"
 services:
-  main-db:
-    image: postgres:16.1
-    container_name: main-db
-    environment:
-      POSTGRES_DB: mainDb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-    ports:
-      - "5433:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mainDb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  stats-db:
-    image: postgres:16.1
-    container_name: stats-db
-    environment:
-      POSTGRES_DB: statsDb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d statsDb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  statssapp:
-    build:
-      context: ./ewm-stats/stats-server
-      dockerfile: Dockerfile
-    image: java-explore-with-me-statsapp
-    container_name: statssapp
+  stats-server:
+    build: ewm-stats/stats-server
+    image: java-explore-with-me-stats-server
+    container_name: statsApp
     ports:
       - "9090:9090"
     depends_on:
-      stats-db:
-        condition: service_healthy
+      - stats-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/statsDb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=12345
+    restart: on-failure
 
-  ewmservice:
-    build:
-      context: ./ewm-service
-      dockerfile: Dockerfile
-    image: java-explore-with-me-ewmservice
-    container_name: ewmservice
+
+  stats-db:
+    image: postgres:16.1
+    container_name: statsDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./volumes/statsDb:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=statsDb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+  main-server:
+    build: ewm-service
+    image: ewm-service
+    container_name: ewmService
     ports:
       - "8080:8080"
     depends_on:
-      main-db:
-        condition: service_healthy
+      - main-db
+      - stats-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://main-db:5432/mainDb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - STATS_SERVER_URL=http://stats-server:9090
+    restart: on-failure
+
+  main-db:
+    image: postgres:16.1
+    container_name: mainDb
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./volumes/mainDb:/var/lib/postgresql/data/
+
+    environment:
+      - POSTGRES_DB=mainDb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
+
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
