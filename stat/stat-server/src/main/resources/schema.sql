@@ -4,5 +4,5 @@ CREATE TABLE IF NOT EXISTS HITS (
     APP        VARCHAR,
     URI        VARCHAR,
     IP         VARCHAR,
-    ts TIMESTAMP WITH TIME ZONE
+    ts         TIMESTAMP WITH TIME ZONE
 );
