@@ -2,6 +2,7 @@ package ru.practicum.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.practicum.exception.InvalidDateRangeException;
 import ru.practicum.mapper.EndpointHitMapper;
 import ru.practicum.model.EndpointHit;
 import ru.practicum.model.EndpointHitDto;
@@ -30,6 +31,9 @@ public class StatsServiceImpl implements StatsService {
 											   LocalDateTime end,
 											   List<String> uris,
 											   boolean unique) {
+		if (start.isAfter(end)) {
+			throw new InvalidDateRangeException("Ошибка даты.");
+		}
 		if (unique) {
 			return hitRepository.findAllUnique(start, end, uris);
 		} else {
