@@ -1,0 +1,43 @@
+name: Docker CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start services
+        run: docker compose up --detach
+
+      - name: Wait for services to start
+        run: |
+          echo "Waiting for services..."
+          sleep 30
+
+      - name: Check container status
+        run: docker compose ps
+
+      - name: Output logs if failure
+        if: failure()
+        run: |
+          echo "== ewm-service logs =="
+          docker compose logs ewm-service || true
+
+          echo "== statsApp logs =="
+          docker compose logs statsApp || true
+
+          echo "== mainDb logs =="
+          docker compose logs main-db || true
+
+          echo "== stats-db logs =="
+          docker compose logs stats-db || true
