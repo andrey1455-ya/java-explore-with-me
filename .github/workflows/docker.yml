@@ -1,61 +1,49 @@
-name: Docker CI
+name: Docker Compose CI
 
 on:
   push:
     branches:
       - main
   pull_request:
-    branches:
-      - main
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
-    services:
-      docker:
-        image: docker:24.0.0
-        options: --privileged
-
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
-        with:
-          java-version: '21'
-          distribution: 'temurin'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build JAR for ewm-service
-        run: mvn clean package -DskipTests -pl ewm-service -am
+      - name: Docker Compose up
+        run: docker compose up --detach
 
-      - name: Build Docker image
-        run: docker build -t ewm-service ./ewm-service
-
-      - name: Start containers
-        run: docker compose up -d
-
-      - name: Wait for ewmService
+      - name: Wait for ewmService to start
         run: |
           chmod +x ./wait-for-it.sh
           ./wait-for-it.sh localhost:8080 -t 60
 
-      - name: Show logs for ewmService if it fails
+      - name: Dump logs from ewmService and statsApp
         if: failure()
         run: |
-          docker logs ewmService > ewm-log.txt || true
+          docker compose logs ewmService > ewm-log.txt || echo "No logs from ewmService"
+          docker compose logs statsApp > stats-log.txt || echo "No logs from statsApp"
 
-      - name: Upload logs if failed
+      - name: Upload ewmService logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: ewm-log
           path: ewm-log.txt
 
-      - name: Docker Compose PS (debug)
-        run: docker compose ps
+      - name: Upload statsApp logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stats-log
+          path: stats-log.txt
 
-      - name: Stop containers
-        if: always()
-        run: docker compose down
+      - name: Check running containers
+        run: docker compose ps
