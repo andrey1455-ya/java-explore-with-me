@@ -32,10 +32,10 @@ services:
       interval: 5s
       retries: 10
 
-  ewm-service:
+  main-server:
     build: ewm-service
     image: ewm-service
-    container_name: ewm-service
+    container_name: ewmService
     ports:
       - "8080:8080"
     depends_on:
