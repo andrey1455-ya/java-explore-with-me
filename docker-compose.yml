@@ -1,3 +1,4 @@
+version: "3.1"
 services:
   stats-server:
     build: ewm-stats/stats-server
@@ -16,7 +17,7 @@ services:
 
   stats-db:
     image: postgres:16.1
-    container_name: stats-db
+    container_name: statsDb
     ports:
       - "5432:5432"
     volumes:
@@ -31,10 +32,10 @@ services:
       interval: 5s
       retries: 10
 
-  ewm-service:
+  main-server:
     build: ewm-service
     image: ewm-service
-    container_name: ewm-service
+    container_name: ewmService
     ports:
       - "8080:8080"
     depends_on:
@@ -49,7 +50,7 @@ services:
 
   main-db:
     image: postgres:16.1
-    container_name: main-db
+    container_name: mainDb
     ports:
       - "5433:5432"
     volumes:
