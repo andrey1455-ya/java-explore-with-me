@@ -4,40 +4,58 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build-and-run:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
+    services:
+      docker:
+        image: docker:24.0.0
+        options: --privileged
+
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
-      - name: Build and start services
-        run: docker compose up --detach
+      - name: Build JAR for ewm-service
+        run: mvn clean package -DskipTests -pl ewm-service -am
 
-      - name: Wait for services to start
+      - name: Build Docker image
+        run: docker build -t ewm-service ./ewm-service
+
+      - name: Start containers
+        run: docker compose up -d
+
+      - name: Wait for ewmService
         run: |
-          echo "Waiting for services..."
-          sleep 30
+          chmod +x ./wait-for-it.sh
+          ./wait-for-it.sh localhost:8080 -t 60
 
-      - name: Check container status
-        run: docker compose ps
-
-      - name: Output logs if failure
+      - name: Show logs for ewmService if it fails
         if: failure()
         run: |
-          echo "== ewm-service logs =="
-          docker compose logs ewm-service || true
+          docker logs ewmService > ewm-log.txt || true
 
-          echo "== statsApp logs =="
-          docker compose logs statsApp || true
+      - name: Upload logs if failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ewm-log
+          path: ewm-log.txt
 
-          echo "== mainDb logs =="
-          docker compose logs main-db || true
+      - name: Docker Compose PS (debug)
+        run: docker compose ps
 
-          echo "== stats-db logs =="
-          docker compose logs stats-db || true
+      - name: Stop containers
+        if: always()
+        run: docker compose down
