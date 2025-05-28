@@ -17,7 +17,7 @@ services:
 
   stats-db:
     image: postgres:16.1
-    container_name: statsDb
+    container_name: stats-db
     ports:
       - "5432:5432"
     volumes:
