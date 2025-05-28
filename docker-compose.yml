@@ -1,83 +1,68 @@
-version: '3.9'
+version: "3.1"
 services:
   stats-server:
-    build: stats/stats-server
-    image: stats-server
-    container_name: stats-server
+    build: ewm-stats/stats-server
+    image: java-explore-with-me-stats-server
+    container_name: statsApp
     ports:
       - "9090:9090"
     depends_on:
-      stats-db:
-        condition: service_healthy
+      - stats-db
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/statsDb
-      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=12345
-      - JAVA_TOOL_OPTIONS=-Duser.timezone=Europe/Moscow
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dbuser -d statsDb"]
-      interval: 10s
-      retries: 5
-    networks:
-      - app-network
+    restart: on-failure
+
 
   stats-db:
     image: postgres:16.1
-    container_name: postgresStats
+    container_name: statsDb
     ports:
       - "5432:5432"
+    volumes:
+      - ./volumes/statsDb:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_PASSWORD=12345
-      - POSTGRES_USER=dbuser
       - POSTGRES_DB=statsDb
-      - TZ=Europe/Moscow
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s
       interval: 5s
       retries: 10
-    networks:
-      - app-network
 
-  ewm-service:
-    build: main-service
+  main-server:
+    build: ewm-service
     image: ewm-service
-    container_name: ewm-service
+    container_name: ewmService
     ports:
       - "8080:8080"
     depends_on:
-      ewm-db:
-        condition: service_healthy
+      - main-db
+      - stats-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/mainDb
-      - SPRING_DATASOURCE_USERNAME=dbuser
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://main-db:5432/mainDb
+      - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=12345
-      - JAVA_TOOL_OPTIONS=-Duser.timezone=Europe/Moscow
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dbuser -d mainDb"]
-      interval: 10s
-      retries: 5
-    networks:
-      - app-network
+      - STATS_SERVER_URL=http://stats-server:9090
+    restart: on-failure
 
-  ewm-db:
+  main-db:
     image: postgres:16.1
-    container_name: postgresMain
+    container_name: mainDb
     ports:
-      - "6432:5432"
+      - "5433:5432"
+    volumes:
+      - ./volumes/mainDb:/var/lib/postgresql/data/
+
     environment:
-      - POSTGRES_PASSWORD=12345
-      - POSTGRES_USER=dbuser
       - POSTGRES_DB=mainDb
-      - TZ=Europe/Moscow
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
+
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s
       interval: 5s
       retries: 10
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
